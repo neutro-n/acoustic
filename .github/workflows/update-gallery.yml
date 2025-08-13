@@ -1,0 +1,52 @@
+# Plik: /.github/workflows/update-gallery.yml
+# Zaktualizowany o poprawkę uprawnień
+
+name: Build and Deploy Gallery
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    # --- NOWOŚĆ: Dajemy robotowi uprawnienia do zapisu --- #
+    # To jest cała poprawka. Mówimy GitHubowi, że ten robot
+    # może modyfikować zawartość repozytorium (contents: write).
+    permissions:
+      contents: write
+
+    steps:
+      # 1. Pobierz kod
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Zainstaluj Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 3. Zainstaluj narzędzia do konwersji (ImageMagick i FFmpeg)
+      - name: Install conversion tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick ffmpeg
+
+      # 4. Uruchom nowy skrypt, który konwertuje pliki
+      - name: Convert media files
+        run: node .github/scripts/convert-media.js
+
+      # 5. Uruchom skrypt, który generuje plik z listą (teraz czyta z folderu assets)
+      - name: Generate gallery data file
+        run: node .github/scripts/generate-gallery-data.js
+
+      # 6. Zapisz i wyślij wszystkie zmiany (nowe zdjęcia, filmy i plik z danymi)
+      - name: Commit and push if changed
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: Automatyczna konwersja mediów i aktualizacja galerii'
+          # Obserwuj zmiany we wszystkich plikach i folderach, żeby niczego nie pominąć
+          file_pattern: .

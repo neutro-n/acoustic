@@ -1,5 +1,5 @@
 /* Plik: /assets/js/galeria-skrypt.js */
-// FINALNA WERSJA POPRAWKOWA: Rozwiązuje problem z odtwarzaniem wideo.
+// FINALNA WERSJA POPRAWKOWA 2: Z autoodtwarzaniem wideo i naprawą błędu spacji.
 
 document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -44,19 +44,18 @@ function showAlbum(albumFolder) {
                 attributes: { preload: false, controls: true }
             },
             thumb: thumbUrl,
-            subHtml: `<h4>${album.nazwa}</h4>` // Możemy dodać tytuł pod wideo
+            subHtml: `<h4>${album.nazwa}</h4>`
         };
     }
     return { src: fullUrl, thumb: thumbUrl, subHtml: `<h4>${album.nazwa}</h4>` };
   });
 
   dynamicGalleryItems.forEach((item, index) => {
-    // ZMIANA: Niezależnie czy to wideo czy zdjęcie, tworzymy DIV
     const itemEl = document.createElement('div');
     itemEl.className = 'photo-item';
     itemEl.dataset.index = index;
     
-    if (item.video) { // Sprawdzamy, czy obiekt ma właściwość 'video'
+    if (item.video) {
         itemEl.innerHTML = `<div class="video-thumb" style="background-image: url('${item.thumb}')"></div><div class="video-icon"><i class="fa-solid fa-play"></i></div>`;
     } else {
         itemEl.innerHTML = `<img src="${item.thumb}" alt="${album.nazwa}" loading="lazy" />`;
@@ -64,11 +63,32 @@ function showAlbum(albumFolder) {
     photoGrid.appendChild(itemEl);
   });
   
+  // ZMIANA: Dodano nowe opcje konfiguracyjne i eventy
   activeGallery = lightGallery(photoGrid, {
     dynamic: true,
     dynamicEl: dynamicGalleryItems,
     plugins: [lgZoom, lgThumbnail, lgVideo],
     download: false,
+    autoplayVideoOnSlide: true, // Automatyczne odtwarzanie wideo
+  });
+
+  // ZMIANA: Dodano event listener do naprawy błędu ze spacją
+  photoGrid.addEventListener('lgAfterSlide', (event) => {
+    const { a: lightGalleryInstance, index: currentSlideIndex } = event.detail;
+    
+    // Znajdź wszystkie odtwarzacze wideo w galerii
+    const videos = lightGalleryInstance.container.querySelectorAll('.lg-video-object');
+    
+    videos.forEach((video, videoIndex) => {
+      // Jeśli to nie jest wideo na aktualnym slajdzie, zatrzymaj je
+      if (videoIndex !== currentSlideIndex) {
+        try {
+          video.pause();
+        } catch(e) {
+          console.warn("Nie można zatrzymać wideo:", e);
+        }
+      }
+    });
   });
 
   photoGrid.addEventListener('click', (event) => {

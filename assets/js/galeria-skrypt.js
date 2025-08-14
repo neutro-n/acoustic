@@ -1,5 +1,5 @@
 /* Plik: /assets/js/galeria-skrypt.js */
-// WERSJA NAPRAWCZA: Uproszczona, niezawodna logika ładowania miniaturek.
+// FINALNA WERSJA POPRAWKOWA: Rozwiązuje problem z odtwarzaniem wideo.
 
 document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -25,7 +25,7 @@ function isVideo(filename) {
 
 function showAlbum(albumFolder) {
   const album = albumy.find(a => a.folder === albumFolder);
-  if (!album || !album.media || album.media.length === 0) return;
+  if (!album || !album.media || !album.media.length === 0) return;
 
   albumTitle.textContent = album.nazwa;
   currentAlbumTitle.textContent = album.nazwa;
@@ -38,31 +38,45 @@ function showAlbum(albumFolder) {
     const thumbUrl = `assets/images/galeria/${album.folder}/${mediaItem.thumb}`;
     
     if (isVideo(mediaItem.full)) {
-        return { src: fullUrl, thumb: thumbUrl, video: { source: [{ src: fullUrl, type: 'video/mp4' }], attributes: { preload: false, controls: true }}};
+        return { 
+            video: { 
+                source: [{ src: fullUrl, type: 'video/mp4' }],
+                attributes: { preload: false, controls: true }
+            },
+            thumb: thumbUrl,
+            subHtml: `<h4>${album.nazwa}</h4>` // Możemy dodać tytuł pod wideo
+        };
     }
-    return { src: fullUrl, thumb: thumbUrl };
+    return { src: fullUrl, thumb: thumbUrl, subHtml: `<h4>${album.nazwa}</h4>` };
   });
 
   dynamicGalleryItems.forEach((item, index) => {
-    const itemEl = document.createElement('a'); // Używamy linku `<a>`
+    // ZMIANA: Niezależnie czy to wideo czy zdjęcie, tworzymy DIV
+    const itemEl = document.createElement('div');
     itemEl.className = 'photo-item';
-    itemEl.href = item.src; // Link do pełnego pliku dla LightGallery
-    itemEl.dataset.lgSize = "1280-853"; // Przykładowy rozmiar, pomaga LightGallery
-
-    if (isVideo(item.src)) {
-        // Dla wideo, tworzymy div z tłem miniaturki
+    itemEl.dataset.index = index;
+    
+    if (item.video) { // Sprawdzamy, czy obiekt ma właściwość 'video'
         itemEl.innerHTML = `<div class="video-thumb" style="background-image: url('${item.thumb}')"></div><div class="video-icon"><i class="fa-solid fa-play"></i></div>`;
     } else {
-        // Dla zdjęć, używamy tagu <img> z leniwym ładowaniem
         itemEl.innerHTML = `<img src="${item.thumb}" alt="${album.nazwa}" loading="lazy" />`;
     }
     photoGrid.appendChild(itemEl);
   });
   
   activeGallery = lightGallery(photoGrid, {
+    dynamic: true,
+    dynamicEl: dynamicGalleryItems,
     plugins: [lgZoom, lgThumbnail, lgVideo],
     download: false,
-    selector: '.photo-item',
+  });
+
+  photoGrid.addEventListener('click', (event) => {
+    const clickedItem = event.target.closest('.photo-item');
+    if (clickedItem) {
+        const index = parseInt(clickedItem.dataset.index, 10);
+        activeGallery.openGallery(index);
+    }
   });
   
   mainHeader.classList.add('hidden');
